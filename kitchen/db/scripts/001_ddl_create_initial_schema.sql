@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS kitchen(
+     id SERIAL PRIMARY KEY
+);
