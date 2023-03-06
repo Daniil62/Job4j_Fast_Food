@@ -31,13 +31,13 @@ public class OrderController {
         List<Item> items = new ArrayList<>();
         orderRequest.getDishList()
                 .stream()
-                .peek(d -> d.setPrice(calculator.calculateTotalItemCost(d)))
+                .peek(d -> d.setPrice(calculator.calculateTotalItemCost(d).doubleValue()))
                 .forEach(d -> {
                     Item item = new Item(d.getName(), d.getPrice());
                     item.setOrder(order);
                     items.add(item);
                 });
-        double totalCost = calculator.sumFinalOrderCost(orderRequest.getDishList());
+        double totalCost = calculator.sumFinalOrderCost(orderRequest.getDishList()).doubleValue();
         order.setItemList(items);
         order.setTotalPrice(totalCost);
         service.createOrder(order);

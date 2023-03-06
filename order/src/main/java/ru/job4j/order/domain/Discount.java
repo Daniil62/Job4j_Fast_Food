@@ -1,5 +1,6 @@
 package ru.job4j.order.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,6 +28,7 @@ public class Discount {
     private int percent;
     @Column(name = "_value")
     private double value;
+    @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY)
     private Set<Dish> dishes = new HashSet<>();
 

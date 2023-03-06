@@ -29,12 +29,16 @@ public class Dish {
             inverseJoinColumns = {
             @JoinColumn(name = "discount_id", referencedColumnName = "id")
     })
-    private Set<Discount> discounts = new HashSet<>();
+    private Set<Discount> discounts = new LinkedHashSet<>();
 
     public Dish(String name, boolean inStock, double price) {
         this.name = name;
         this.inStock = inStock;
         this.price = price;
+    }
+
+    public void addDiscount(Discount discount) {
+        discounts.add(discount);
     }
 
     @Override

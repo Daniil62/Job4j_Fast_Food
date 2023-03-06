@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import ru.job4j.order.domain.Discount;
 import ru.job4j.order.domain.Dish;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.List;
@@ -22,7 +23,7 @@ public class OrderCalculatorTest {
                 20, 0);
         Dish dish = new Dish(0, "dish",
                 true, 550, Set.of(twentyPercentsDiscount));
-        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(440.0));
+        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(BigDecimal.valueOf(440.0)));
     }
 
     @Test
@@ -33,7 +34,7 @@ public class OrderCalculatorTest {
                 0, 200);
         Dish dish = new Dish(0, "dish",
                 true, 550, Set.of(twentyPercentsDiscount));
-        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(350.0));
+        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(BigDecimal.valueOf(350.0)));
     }
 
     @Test
@@ -44,7 +45,7 @@ public class OrderCalculatorTest {
                 5, 50);
         Dish dish = new Dish(0, "dish",
                 true, 550, Set.of(doubleDiscount));
-        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(472.5));
+        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(BigDecimal.valueOf(472.5)));
     }
 
     @Test
@@ -55,7 +56,7 @@ public class OrderCalculatorTest {
                 15, 0);
         Dish dish = new Dish(0, "dish",
                 true, 550, Set.of(finishedDiscount));
-        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(550.0));
+        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(BigDecimal.valueOf(550.0)));
     }
 
     @Test
@@ -68,9 +69,11 @@ public class OrderCalculatorTest {
                 LocalDateTime.now(),
                 LocalDateTime.now().plus(Period.ofDays(1)),
                 0, 15);
-        Dish dish = new Dish(0, "dish",
-                true, 550, Set.of(doubleDiscount, littleDiscount));
-        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(457.5));
+        Dish dish = new Dish("dish",
+                true, 550);
+        dish.addDiscount(doubleDiscount);
+        dish.addDiscount(littleDiscount);
+        assertThat(new OrderCalculatorImpl().calculateTotalItemCost(dish), is(BigDecimal.valueOf(457.5)));
     }
 
     @Test
@@ -95,6 +98,6 @@ public class OrderCalculatorTest {
         Dish fourth = new Dish(0, "second",
                 true, 600, Set.of(finishedDiscount));
         assertThat(new OrderCalculatorImpl().calculateTotalOrderCost(List.of(first, second, third, fourth)),
-                is(2077.5));
+                is(BigDecimal.valueOf(2077.5)));
     }
 }

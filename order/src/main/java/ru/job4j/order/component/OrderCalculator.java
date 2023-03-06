@@ -2,13 +2,14 @@ package ru.job4j.order.component;
 
 import ru.job4j.order.domain.Dish;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface OrderCalculator {
 
-    double calculateTotalOrderCost(List<Dish> list);
+    BigDecimal calculateTotalOrderCost(List<Dish> list);
 
-    double sumFinalOrderCost(List<Dish> list);
+    BigDecimal sumFinalOrderCost(List<Dish> list);
 
-    double calculateTotalItemCost(Dish dish);
+    BigDecimal calculateTotalItemCost(Dish dish);
 }
