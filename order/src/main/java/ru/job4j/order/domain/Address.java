@@ -1,10 +1,8 @@
 package ru.job4j.order.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.google.gson.annotations.Expose;
+import lombok.*;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -17,14 +15,19 @@ import java.util.Objects;
 @NoArgsConstructor
 @Getter
 @Setter
+@ToString
 public class Address {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @JsonIgnore
+    @Expose
     private Integer id;
+    @Expose
     private String street;
+    @Expose
     private String home;
+    @Expose
     private String apartment;
 
     public Address(String street, String home, String apartment) {

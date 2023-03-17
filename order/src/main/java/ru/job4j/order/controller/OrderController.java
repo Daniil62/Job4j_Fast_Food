@@ -1,19 +1,19 @@
 package ru.job4j.order.controller;
 
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSerializer;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
-import ru.job4j.order.component.OrderCalculator;
-import ru.job4j.order.domain.Item;
 import ru.job4j.order.domain.Order;
 import ru.job4j.order.domain.dto.OrderRequest;
 import ru.job4j.order.domain.dto.OrderResponse;
 import ru.job4j.order.service.OrderService;
 import ru.job4j.order.util.OrderStatus;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @RestController
@@ -23,26 +23,20 @@ import java.util.Optional;
 public class OrderController {
 
     private final OrderService service;
-    private final OrderCalculator calculator;
+    private final JsonSerializer<LocalDateTime> dateTimeJsonSerializer;
+    private final KafkaTemplate<Integer, String> template;
 
     @PostMapping("/create")
     public ResponseEntity<OrderResponse> createOrder(@RequestBody OrderRequest orderRequest) {
-        Order order = new Order(orderRequest.getAddress(), OrderStatus.CREATED);
-        List<Item> items = new ArrayList<>();
-        orderRequest.getDishList()
-                .stream()
-                .peek(d -> d.setPrice(calculator.calculateTotalItemCost(d).doubleValue()))
-                .forEach(d -> {
-                    Item item = new Item(d.getName(), d.getPrice());
-                    item.setOrder(order);
-                    items.add(item);
-                });
-        double totalCost = calculator.sumFinalOrderCost(orderRequest.getDishList()).doubleValue();
-        order.setItemList(items);
-        order.setTotalPrice(totalCost);
-        service.createOrder(order);
-        return ResponseEntity.ok().body(
-                new OrderResponse(totalCost, orderRequest.getAddress(), items));
+        Order order = new Order();
+        boolean isPresent = orderRequest != null;
+        if (orderRequest != null) {
+            order = service.createOrderFromRequest(orderRequest);
+            service.createOrder(order);
+        }
+        return ResponseEntity.status(isPresent ? HttpStatus.OK : HttpStatus.BAD_REQUEST)
+                .body(isPresent ? new OrderResponse(order.getTotalPrice(),
+                        orderRequest.getAddress(), order.getItemList()) : null);
     }
 
     @PatchMapping("/complete/{id}")
@@ -79,5 +73,18 @@ public class OrderController {
         return ResponseEntity
                 .status(isPresent ? HttpStatus.OK : HttpStatus.NOT_FOUND)
                 .body(isPresent && isNotCompleted);
+    }
+
+    @PostMapping("/order_create")
+    public void createOrd(@RequestBody OrderRequest orderRequest) {
+        if (orderRequest != null) {
+            Order order = service.createOrderFromRequest(orderRequest);
+            GsonBuilder gsonBuilder = new GsonBuilder();
+            gsonBuilder.registerTypeAdapter(LocalDateTime.class, dateTimeJsonSerializer);
+            String orderJson = gsonBuilder
+                    .excludeFieldsWithoutExposeAnnotation()
+                    .create().toJson(order);
+            template.send("order", orderJson);
+        }
     }
 }
