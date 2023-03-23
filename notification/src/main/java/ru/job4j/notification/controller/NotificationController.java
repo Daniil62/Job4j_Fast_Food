@@ -21,7 +21,7 @@ public class NotificationController {
     private final OrderService service;
     private final JsonDeserializer<LocalDateTime> dateTimeDeserializer;
 
-    @KafkaListener(topics = {"order"})
+    @KafkaListener(topics = {"messenger"})
     public void onApiCall(ConsumerRecord<Integer, String> input) {
         String value = input.value();
         GsonBuilder gsonBuilder = new GsonBuilder();
