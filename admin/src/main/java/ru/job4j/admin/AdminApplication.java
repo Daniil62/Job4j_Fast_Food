@@ -8,6 +8,6 @@ public class AdminApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(AdminApplication.class, args);
-        System.out.println("Go to http://localhost:8080/dishes");
+        System.out.println("Go to http://localhost:8085/dishes");
     }
 }
