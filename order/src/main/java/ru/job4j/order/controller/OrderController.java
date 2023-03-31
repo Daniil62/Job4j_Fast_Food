@@ -3,88 +3,98 @@ package ru.job4j.order.controller;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSerializer;
 import lombok.AllArgsConstructor;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
+import ru.job4j.order.component.converter.OrderConverter;
 import ru.job4j.order.domain.Order;
+import ru.job4j.order.domain.dto.KitchenOrderResponse;
+import ru.job4j.order.domain.dto.OrderDTO;
 import ru.job4j.order.domain.dto.OrderRequest;
 import ru.job4j.order.domain.dto.OrderResponse;
 import ru.job4j.order.service.OrderService;
 import ru.job4j.order.util.OrderStatus;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/order")
 @AllArgsConstructor
-@CrossOrigin(origins = "http://localhost:8080")
 public class OrderController {
 
     private final OrderService service;
     private final JsonSerializer<LocalDateTime> dateTimeJsonSerializer;
     private final KafkaTemplate<Integer, String> template;
+    private final OrderConverter<OrderRequest, Order> orderFromOrderResponseConverter;
+    private final OrderConverter<Order, OrderDTO> orderDTOFromOrderConverter;
 
     @PostMapping("/create")
     public ResponseEntity<OrderResponse> createOrder(@RequestBody OrderRequest orderRequest) {
-        Order order = new Order();
-        boolean isPresent = orderRequest != null;
-        if (orderRequest != null) {
-            order = service.createOrderFromRequest(orderRequest);
-            service.createOrder(order);
-        }
-        return ResponseEntity.status(isPresent ? HttpStatus.OK : HttpStatus.BAD_REQUEST)
-                .body(isPresent ? new OrderResponse(order.getTotalPrice(),
-                        orderRequest.getAddress(), order.getItemList()) : null);
+        Order order = orderFromOrderResponseConverter.convert(orderRequest);
+        sendToNotification(order);
+        sendToKitchen(service.createOrder(order));
+        return ResponseEntity.ok()
+                .body(new OrderResponse(order.getTotalPrice(),
+                        orderRequest.getAddress(), order.getItemList()));
     }
 
     @PatchMapping("/complete/{id}")
     public ResponseEntity<Boolean> completeOrder(@PathVariable int id) {
-        Optional<Order> optionalOrder = service.findById(id);
-        boolean isPresent = optionalOrder.isPresent();
-        boolean isNotCancelled = false;
-        if (isPresent) {
-            Order order = optionalOrder.get();
-            isNotCancelled = !OrderStatus.CANCELED.equals(order.getStatus());
-            if (isNotCancelled) {
-                order.setStatus(OrderStatus.COMPLETED);
-                service.createOrder(order);
-            }
-        }
+        boolean isFound = service.validateById(id);
         return ResponseEntity
-                .status(isPresent ? HttpStatus.OK : HttpStatus.NOT_FOUND)
-                .body(isPresent && isNotCancelled);
+                .status(isFound ? HttpStatus.OK : HttpStatus.NOT_FOUND)
+                .body(isFound && changeStatus(id, OrderStatus.COMPLETED));
     }
 
-    @PostMapping("/cancel/{id}")
+    @PatchMapping("/cancel/{id}")
     public ResponseEntity<Boolean> cancelOrder(@PathVariable int id) {
-        Optional<Order> optionalOrder = service.findById(id);
-        boolean isPresent = optionalOrder.isPresent();
-        boolean isNotCompleted = false;
-        if (isPresent) {
-            Order order = optionalOrder.get();
-            isNotCompleted = !OrderStatus.COMPLETED.equals(order.getStatus());
-            if (isNotCompleted) {
-                order.setStatus(OrderStatus.CANCELED);
-                service.createOrder(order);
-            }
-        }
+        boolean isFound = service.validateById(id);
         return ResponseEntity
-                .status(isPresent ? HttpStatus.OK : HttpStatus.NOT_FOUND)
-                .body(isPresent && isNotCompleted);
+                .status(isFound ? HttpStatus.OK : HttpStatus.NOT_FOUND)
+                .body(isFound && changeStatus(id, OrderStatus.CANCELED));
     }
 
-    @PostMapping("/order_create")
-    public void createOrd(@RequestBody OrderRequest orderRequest) {
-        if (orderRequest != null) {
-            Order order = service.createOrderFromRequest(orderRequest);
-            GsonBuilder gsonBuilder = new GsonBuilder();
-            gsonBuilder.registerTypeAdapter(LocalDateTime.class, dateTimeJsonSerializer);
-            String orderJson = gsonBuilder
-                    .excludeFieldsWithoutExposeAnnotation()
-                    .create().toJson(order);
-            template.send("order", orderJson);
+    private boolean changeStatus(int id, String status) {
+        boolean result = service.validateByIdAndStatus(id,
+                Set.of(OrderStatus.CANCELED, OrderStatus.COMPLETED));
+        if (result) {
+            service.changeStatus(id, status);
+        }
+        return result;
+    }
+
+    private void sendToNotification(Order order) {
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(LocalDateTime.class, dateTimeJsonSerializer);
+        String orderJson = gsonBuilder
+                .excludeFieldsWithoutExposeAnnotation()
+                .create().toJson(order);
+        template.send("messenger", orderJson);
+    }
+
+    private void sendToKitchen(Order order) {
+        OrderDTO orderDTO = orderDTOFromOrderConverter.convert(order);
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(LocalDateTime.class, dateTimeJsonSerializer);
+        String orderJson = gsonBuilder.create().toJson(orderDTO);
+        template.send("preorder", orderJson);
+    }
+
+    @KafkaListener(topics = "cooked_order")
+    public void onApiCall(ConsumerRecord<Integer, String> input) {
+        KitchenOrderResponse response = new GsonBuilder()
+                .create()
+                .fromJson(input.value(), KitchenOrderResponse.class);
+        String status = response.getStatus();
+        int id = response.getId();
+        if (OrderStatus.CANCELED.equals(status)) {
+            service.deleteOrder(id);
+        } else {
+            service.changeStatus(id, status);
         }
     }
 }

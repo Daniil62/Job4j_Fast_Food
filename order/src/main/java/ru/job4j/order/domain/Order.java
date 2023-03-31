@@ -16,7 +16,7 @@ import java.util.Objects;
 @Getter
 @Setter
 @ToString
-public class Order {
+public class Order extends BaseOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

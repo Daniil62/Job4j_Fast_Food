@@ -12,7 +12,7 @@ import javax.persistence.*;
 @Getter
 @Setter
 @ToString(exclude = "order")
-public class Item {
+public class Item extends BaseDish {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

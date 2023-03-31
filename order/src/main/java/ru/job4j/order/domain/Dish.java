@@ -13,7 +13,7 @@ import java.util.*;
 @NoArgsConstructor
 @Getter
 @Setter
-public class Dish {
+public class Dish extends BaseDish {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
