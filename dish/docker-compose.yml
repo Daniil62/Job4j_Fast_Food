@@ -1,0 +1,41 @@
+ version: "3.9"
+ services:
+   db:
+     image: postgres
+     user: postgres
+     container_name: db
+     environment:
+       - POSTGRES_PASSWORD=postgresPassword
+       - POSTGRES_USER=postgres
+       - POSTGRES_DB=j4j_fast_food_dish
+       - PGDATA=/var/lib/postgresql/data
+     volumes:
+       - ./db/j4j_fast_food_dish/data:/var/lib/postgresql/data
+     ports:
+       - "5432:5432"
+     restart: always
+   lb:
+     build:
+       context: .
+       dockerfile: DockerfileLB
+     environment:
+       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/j4j_fast_food_dish
+       - SPRING_DATASOURCE_USERNAME=postgres
+       - SPRING_DATASOURCE_PASSWORD=postgresPassword
+     container_name: lb
+     depends_on:
+       - db
+   job4j_dish:
+     build:
+       context: .
+       dockerfile: Dockerfile
+     environment:
+       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/j4j_fast_food_dish
+       - SPRING_DATASOURCE_USERNAME=postgres
+       - SPRING_DATASOURCE_PASSWORD=postgresPassword
+     container_name: job4j_dish
+     ports:
+       - "127.0.0.1:80:8081"
+     depends_on:
+       - db
+       - lb

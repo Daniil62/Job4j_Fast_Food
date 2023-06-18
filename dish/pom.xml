@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -17,6 +20,14 @@
 
     <properties>
         <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <docker_db_url_jdbc>${JDBC_URL}</docker_db_url_jdbc>
+        <docker.db.username.jdbc>${JDBC_USERNAME}</docker.db.username.jdbc>
+        <docker.db.password.jdbc>${JDBC_PASSWORD}</docker.db.password.jdbc>
+        <docker.db.driver.jdbc>${JDBC_DRIVER}</docker.db.driver.jdbc>
     </properties>
 
     <dependencies>
@@ -56,7 +67,11 @@
     </dependencies>
 
     <build>
+
+        <finalName>job4j_dish</finalName>
+
         <plugins>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -114,6 +129,13 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+            </plugin>
+
         </plugins>
     </build>
 
@@ -138,6 +160,16 @@
                 <db.username>postgres</db.username>
                 <db.password>postgresPassword</db.password>
                 <db.driver>org.postgresql.Driver</db.driver>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>docker</id>
+            <properties>
+                <liquibase.changeLogFile>db/master.xml</liquibase.changeLogFile>
+                <liquibase.url>${docker_db_url_jdbc}</liquibase.url>
+                <liquibase.username>${docker.db.username.jdbc}</liquibase.username>
+                <liquibase.password>${docker.db.password.jdbc}</liquibase.password>
             </properties>
         </profile>
     </profiles>
